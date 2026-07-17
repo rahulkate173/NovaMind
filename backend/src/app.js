@@ -12,6 +12,9 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 
 const app = express();
 
+// Trust reverse proxy (Render / Vercel HTTPS load balancing) so Passport sees https:// instead of http://
+app.enable('trust proxy');
+
 // ── Middleware ────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
