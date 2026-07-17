@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import json
 import re
+import time
+import logging
 from typing import Any, Dict, Optional
 
 from config import get_settings
+
+logger = logging.getLogger("LLMClient")
 
 
 def _extract_json(text: str) -> Dict[str, Any]:
@@ -25,13 +29,18 @@ class LLMClient:
         self.settings = get_settings()
         self._client = None
         if self.settings.llm_available:
-            from langchain_groq import ChatGroq
+            try:
+                from langchain_groq import ChatGroq
 
-            self._client = ChatGroq(
-                api_key=self.settings.groq_api_key,
-                model=self.settings.groq_model,
-                temperature=self.settings.llm_temperature,
-            )
+                self._client = ChatGroq(
+                    api_key=self.settings.groq_api_key,
+                    model=self.settings.groq_model,
+                    temperature=self.settings.llm_temperature,
+                    max_retries=3,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to initialize ChatGroq: {e}. Falling back to mock client.")
+                self._client = None
 
     @property
     def is_mock(self) -> bool:
@@ -44,17 +53,50 @@ class LLMClient:
             ("system", system),
             ("human", user),
         ]
-        result = self._client.invoke(messages)
-        return str(result.content)
+        for attempt in range(3):
+            try:
+                result = self._client.invoke(messages)
+                return str(result.content)
+            except Exception as e:
+                err_str = str(e).lower()
+                if "429" in err_str or "rate limit" in err_str:
+                    if attempt < 2:
+                        sleep_time = (attempt + 1) * 3
+                        logger.warning(f"Groq rate limit hit (429). Retrying in {sleep_time}s...")
+                        time.sleep(sleep_time)
+                        continue
+                    else:
+                        logger.warning("Groq rate limit exhausted after retries. Falling back to mock response.")
+                        return self._mock_chat(system, user)
+                logger.warning(f"ChatGroq error: {e}. Falling back to mock response.")
+                return self._mock_chat(system, user)
+        return self._mock_chat(system, user)
 
     def chat_json(self, system: str, user: str) -> Dict[str, Any]:
         if self._client is None:
             return self._mock_json(system, user)
-        raw = self.chat(
-            system + "\nRespond with valid JSON only.",
-            user,
-        )
-        return _extract_json(raw)
+        messages = [
+            ("system", system + "\nRespond with valid JSON only."),
+            ("human", user),
+        ]
+        for attempt in range(3):
+            try:
+                result = self._client.invoke(messages)
+                return _extract_json(str(result.content))
+            except Exception as e:
+                err_str = str(e).lower()
+                if "429" in err_str or "rate limit" in err_str:
+                    if attempt < 2:
+                        sleep_time = (attempt + 1) * 3
+                        logger.warning(f"Groq rate limit hit (429) during JSON call. Retrying in {sleep_time}s...")
+                        time.sleep(sleep_time)
+                        continue
+                    else:
+                        logger.warning("Groq rate limit exhausted during JSON call. Falling back to mock JSON.")
+                        return self._mock_json(system, user)
+                logger.warning(f"ChatGroq JSON error: {e}. Falling back to mock JSON.")
+                return self._mock_json(system, user)
+        return self._mock_json(system, user)
 
     def _mock_chat(self, system: str, user: str) -> str:
         lower = (system + " " + user).lower()
