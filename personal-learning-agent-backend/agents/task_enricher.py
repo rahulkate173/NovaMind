@@ -90,6 +90,17 @@ def enrich_topic_task(
         if not enriched["sub_skills"]:
             enriched["sub_skills"] = base_skills or [topic]
 
+    if not enriched.get("resources"):
+        import urllib.parse
+        query = urllib.parse.quote_plus(topic)
+        enriched["resources"] = [
+            ResourceLink(
+                title=f"Search tutorials: {topic}",
+                url=f"https://www.youtube.com/results?search_query={query}",
+                kind="video"
+            )
+        ]
+
     return {
         "id": new_id("task"),
         "title": enriched["title"],
@@ -136,21 +147,21 @@ def _mock_enrich(
     base_skills: List[str],
     base_resources: List[ResourceLink],
 ) -> Dict[str, Any]:
-    skills = base_skills or _default_sub_skills(topic)
+    short_topic = topic if len(topic) <= 45 else topic.split('?')[0].split('.')[0][:45].strip()
+    skills = base_skills or _default_sub_skills(short_topic)
     if base_description:
         description = (
             f"{base_description} "
             f"For your goal \"{goal}\", focus on applying these ideas through the listed sub-skills and resources."
         )
     else:
-        skill_txt = ", ".join(skills[:4])
+        skill_txt = ", ".join(skills[:3])
         description = (
-            f"{topic} is a core building block toward \"{goal}\". "
             f"Build fluency in: {skill_txt}. "
-            f"Use the recommended courses/resources, then complete a short practice exercise before the quiz."
+            f"Use the recommended resources and complete a short practice exercise before the quiz."
         )
     return {
-        "title": f"Learn {topic}: build foundations for {goal}",
+        "title": f"Learn {short_topic}" if len(short_topic) > 30 else f"Learn {short_topic}: build foundations for {goal}",
         "description": description.strip(),
         "sub_skills": skills,
         "resources": base_resources,
@@ -167,4 +178,5 @@ def _default_sub_skills(topic: str) -> List[str]:
         return ["Syntax & data structures", "Libraries", "Small scripts / notebooks"]
     if "machine learning" in t:
         return ["Supervised learning", "Model evaluation", "Feature engineering"]
-    return [f"{topic} fundamentals", f"Hands-on practice with {topic}", f"Apply {topic} to a mini project"]
+    short_t = topic if len(topic) <= 35 else topic[:35].strip() + "..."
+    return [f"Core concepts of {short_t}", f"Hands-on practice with {short_t}", f"Apply {short_t} to a mini project"]

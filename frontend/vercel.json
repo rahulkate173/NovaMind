@@ -1,0 +1,35 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/tutor/:path*",
+      "destination": "https://novamind-express-backend.onrender.com/api/tutor/:path*"
+    },
+    {
+      "source": "/api/doubt/:path*",
+      "destination": "https://novamind-express-backend.onrender.com/api/doubt/:path*"
+    },
+    {
+      "source": "/api/dashboard/:path*",
+      "destination": "https://novamind-express-backend.onrender.com/api/dashboard/:path*"
+    },
+    {
+      "source": "/auth/:path*",
+      "destination": "https://novamind-express-backend.onrender.com/auth/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://novamind-python-agent.onrender.com/api/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://novamind-python-agent.onrender.com/health"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

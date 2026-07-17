@@ -126,8 +126,11 @@ def get_daily_tasks(state: LearnerState) -> Dict[str, Any]:
         if task.is_project or task.is_quiz:
             continue
         on_day = (task.day or 1) == day
-        if on_day and task.id not in completed and task.status != TaskStatus.COMPLETED:
-            daily_tasks.append(_serialize_task_item(task))
+        if on_day:
+            is_done = task.id in completed or task.status == TaskStatus.COMPLETED
+            item = _serialize_task_item(task)
+            item["completed"] = is_done
+            daily_tasks.append(item)
 
     overdue = _overdue_pending_tasks(week, day, completed)
     reason = _update_reason(state)
@@ -182,7 +185,8 @@ def get_daily_quizzes(state: LearnerState) -> Dict[str, Any]:
         is_due_checkpoint = task.is_quiz and _study_tasks_done_for_day(week, day, completed)
 
         if task.is_quiz:
-            if is_due_checkpoint and task.id not in completed and task.status != TaskStatus.COMPLETED:
+            is_completed = task.id in completed or task.status == TaskStatus.COMPLETED
+            if is_due_checkpoint or is_completed:
                 daily_quizzes.append(
                     _serialize_quiz_item(
                         task_id=task.id,
@@ -192,12 +196,13 @@ def get_daily_quizzes(state: LearnerState) -> Dict[str, Any]:
                         topics=task.topics,
                         quiz=task.quiz,
                         due_reason="Complete today's study tasks, then take this checkpoint quiz.",
-                        completed=False,
+                        completed=is_completed,
                     )
                 )
             continue
 
-        if on_day and task.id not in completed and task.status != TaskStatus.COMPLETED and task.quiz:
+        is_completed = task.id in completed or task.status == TaskStatus.COMPLETED
+        if on_day and task.quiz:
             daily_quizzes.append(
                 _serialize_quiz_item(
                     task_id=task.id,
@@ -207,7 +212,7 @@ def get_daily_quizzes(state: LearnerState) -> Dict[str, Any]:
                     topics=task.topics,
                     quiz=task.quiz,
                     due_reason="Take after completing the related study task (or at start if reviewing).",
-                    completed=False,
+                    completed=is_completed,
                 )
             )
 

@@ -1,0 +1,155 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+/* ─── LIGHT THEME ─── */
+:root,
+[data-theme='light'] {
+  --bg-primary:     #f0f2f8;
+  --bg-secondary:   #ffffff;
+  --bg-tertiary:    #e8ebf4;
+  --bg-card:        #ffffff;
+  --bg-sidebar:     #ffffff;
+  --bg-hover:       #f0f2f8;
+
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+
+  --border-color:   rgba(0, 0, 0, 0.08);
+  --border-active:  rgba(99, 102, 241, 0.4);
+
+  --accent-1:       #6366f1;
+  --accent-2:       #8b5cf6;
+  --accent-3:       #06b6d4;
+  --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+
+  --card-shadow:    0 2px 16px rgba(0,0,0,0.07);
+  --card-shadow-hover: 0 8px 32px rgba(99,102,241,0.18);
+
+  --sidebar-width:  240px;
+  --radius-sm:      8px;
+  --radius-md:      14px;
+  --radius-lg:      20px;
+  --radius-xl:      28px;
+
+  --stat-streak-bg: linear-gradient(135deg, #f59e0b, #ef4444);
+  --stat-quiz-bg:   linear-gradient(135deg, #06b6d4, #3b82f6);
+  --stat-road-bg:   linear-gradient(135deg, #10b981, #059669);
+
+  --quick-doubt-bg: linear-gradient(135deg, #7c3aed, #6366f1);
+  --quick-tutor-bg: linear-gradient(135deg, #2563eb, #06b6d4);
+  --quick-quiz-bg:  linear-gradient(135deg, #0f172a, #1e3a5f);
+}
+
+/* ─── DARK THEME ─── */
+html[data-theme='dark'] {
+  --bg-primary:     #07090f;
+  --bg-secondary:   #0c0e18;
+  --bg-tertiary:    #111420;
+  --bg-card:        #0e1118;
+  --bg-sidebar:     #080a12;
+  --bg-hover:       #13172a;
+
+  --text-primary:   #dde3f0;
+  --text-secondary: #7e8daa;
+  --text-muted:     #3d4560;
+
+  --border-color:   rgba(255, 255, 255, 0.055);
+  --border-active:  rgba(124, 106, 247, 0.45);
+
+  --accent-1:       #7c6af7;
+  --accent-2:       #9d8bf4;
+  --accent-3:       #38bdf8;
+  --accent-gradient: linear-gradient(135deg, #7c6af7, #9d8bf4);
+
+  --card-shadow:    0 2px 28px rgba(0,0,0,0.55);
+  --card-shadow-hover: 0 10px 44px rgba(124,106,247,0.22);
+
+  --stat-streak-bg: linear-gradient(135deg, #e9a84c, #dc5252);
+  --stat-quiz-bg:   linear-gradient(135deg, #2ab5d1, #3b7cf6);
+  --stat-road-bg:   linear-gradient(135deg, #22c984, #0e9966);
+
+  --quick-doubt-bg: linear-gradient(135deg, #4a2fa0, #5a4fd4);
+  --quick-tutor-bg: linear-gradient(135deg, #1a4fd6, #1795c0);
+  --quick-quiz-bg:  linear-gradient(135deg, #0e1118, #13172a);
+}
+
+/* ─── RESET & BASE ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: block;
+  place-items: unset;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: none;
+  font-family: inherit;
+}
+
+h1,h2,h3,h4,h5,h6 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-1);
+}
+
+/* ─── GLOBAL ANIMATIONS ─── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+@keyframes animate-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: animate-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}

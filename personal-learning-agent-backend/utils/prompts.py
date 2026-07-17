@@ -25,11 +25,12 @@ Return JSON only:
 {"title": str, "description": str, "sub_skills": [str], "resources": [{"title": str, "url": str, "kind": str}]}
 """
 
-TASK_QUIZ_SYSTEM = """You generate a short quiz for one learning subtask.
+TASK_QUIZ_SYSTEM = """You generate a short multiple-choice quiz for one learning subtask.
 Ground every question in: main goal + subgoal/topic + description (+ sub-skills when provided).
-Create 3 concise questions (short_answer or mcq). For mcq include 3-4 options.
+Create concise questions of type "mcq". Provide exactly 3-4 options for each question.
+Set "answer_hint" to the exact string text of the correct option.
 Return JSON only:
-{"questions": [{"id": str, "prompt": str, "topic": str, "type": "short_answer"|"mcq", "options": [str], "answer_hint": str}]}
+{"questions": [{"id": str, "prompt": str, "topic": str, "type": "mcq", "options": [str], "answer_hint": str}]}
 """
 
 NUDGE_GENERATOR_SYSTEM = """You are a Nudge Generator for a Personal Learning Agent.

@@ -101,8 +101,9 @@ def _mock_questions(
                 id=f"q{i+1}",
                 prompt=prompts[i % len(prompts)],
                 topic=topic,
-                type="short_answer",
-                answer_hint=f"Relate your answer to {goal} and {topic}",
+                type="mcq",
+                options=["True/Correct Option", "False/Distractor A", "False/Distractor B", "False/Distractor C"],
+                answer_hint="True/Correct Option",
             )
         )
     return out
