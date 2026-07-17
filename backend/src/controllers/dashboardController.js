@@ -33,7 +33,7 @@ export async function syncTasksHandler(req, res) {
           syncedAt    : new Date(),
         },
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     return res.json({ ok: true, syncedAt: doc.syncedAt, taskCount: tasks.length });
