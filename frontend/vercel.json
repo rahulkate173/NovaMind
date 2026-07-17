@@ -21,11 +21,11 @@
     },
     {
       "source": "/api/:path*",
-      "destination": "https://novamind-python-agent.onrender.com/api/:path*"
+      "destination": "https://novamind-32l5.onrender.com/api/:path*"
     },
     {
       "source": "/health",
-      "destination": "https://novamind-python-agent.onrender.com/health"
+      "destination": "https://novamind-32l5.onrender.com/health"
     },
     {
       "source": "/(.*)",
