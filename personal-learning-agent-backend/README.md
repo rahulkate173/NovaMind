@@ -44,6 +44,40 @@ Each quiz item: `task_id`, `title`, `quiz_id`, `questions` (sub-questions), `due
 
 Set `sync=false` on task/quiz GET routes to skip auto workflow check.
 
+## State storage
+
+Learner state (plan, progress, quizzes, weak areas) is saved through `StateManager` → `get_repository()`.
+
+| Layer | Default | Purpose |
+|-------|---------|---------|
+| **Primary state** | SQLite file `./data/learner.db` | One row per `user_id` (JSON payload) |
+| **Vector memory** | Chroma `./data/chroma` | Tutor recall / state snapshots per user |
+
+Every API call uses `user_id` to load that user’s state. Multiple users are supported: each `user_id` is a separate record.
+
+### MongoDB (shared / production)
+
+Set in `.env`:
+
+```env
+STATE_STORE=mongodb
+MONGODB_URI=mongodb+srv://USER:PASS@cluster.mongodb.net/personal-learning-agent
+MONGODB_DATABASE=personal-learning-agent
+MONGODB_COLLECTION=ai-agent-backend
+```
+
+Documents in collection `ai-agent-backend`:
+
+```json
+{
+  "user_id": "user_123",
+  "payload": { "...full LearnerState..." },
+  "updated_at": "2026-07-17T10:00:00Z"
+}
+```
+
+`GET /health` reports `state_store` and `mongodb_connected` when using MongoDB.
+
 ## Architecture
 
 ```
@@ -51,7 +85,7 @@ personal-learning-agent-backend/
 ├── agents/          # Intent, plan, progress, nudge, feedback, roadmap, state
 ├── workflow/        # LangGraph graph (nodes, edges, executor)
 ├── chatbot/         # 24/7 state-aware tutor
-├── state/           # LearnerState models + SQLite + Chroma
+├── state/           # LearnerState models + SQLite or MongoDB + Chroma
 ├── tools/           # roadmap.sh data, web search, calendar, quiz
 ├── mcp/             # Tool definitions for future agent calling
 ├── api/routes/      # REST API for workflow / chat / state
