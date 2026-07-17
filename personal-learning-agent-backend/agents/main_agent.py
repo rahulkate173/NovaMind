@@ -59,13 +59,29 @@ class MainAgent:
         )
         return self.executor.handle_quiz(quiz)
 
+    def get_tasks(
+        self,
+        user_id: str,
+        view: Literal["daily", "weekly"] = "daily",
+        sync: bool = True,
+    ) -> Dict[str, Any]:
+        return self.tasks.get_tasks(user_id, view=view, sync=sync)
+
+    def get_quizzes(
+        self,
+        user_id: str,
+        view: Literal["daily", "weekly"] = "daily",
+        sync: bool = True,
+    ) -> Dict[str, Any]:
+        return self.tasks.get_quizzes(user_id, view=view, sync=sync)
+
     def get_schedule(
         self,
         user_id: str,
         view: Literal["daily", "weekly"] = "daily",
         sync: bool = True,
     ) -> Dict[str, Any]:
-        return self.tasks.get_schedule(user_id, view=view, sync=sync)
+        return self.get_tasks(user_id, view=view, sync=sync)
 
     def complete_task(self, user_id: str, task_id: str) -> Dict[str, Any]:
         return self.tasks.complete_task(user_id, task_id)

@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import chatbot, state, tasks, workflow
+from api.routes import chatbot, quizzes, state, tasks, workflow
 from config import get_settings
 from mcp.server import get_mcp_server
 
@@ -34,6 +34,7 @@ app.add_middleware(
 app.include_router(workflow.router)
 app.include_router(workflow.feedback_router)
 app.include_router(tasks.router)
+app.include_router(quizzes.router)
 app.include_router(chatbot.router)
 app.include_router(state.router)
 

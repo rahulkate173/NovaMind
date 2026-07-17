@@ -83,33 +83,48 @@ def _first_study_task(plan: dict) -> dict:
     raise AssertionError("No study task found")
 
 
-def test_daily_schedule_has_rich_tasks(client: TestClient):
+def test_daily_tasks_slim_payload(client: TestClient):
     _start(client)
     resp = client.get("/api/tasks/daily/u_tasks?sync=false")
     assert resp.status_code == 200
     data = resp.json()
     assert data["view"] == "daily"
-    assert data["goal"]
-    assert data["current_week"] >= 1
+    assert "quizzes" not in data
     assert isinstance(data["tasks"], list)
     if data["tasks"]:
         task = data["tasks"][0]
-        assert "description" in task
-        assert "resources" in task
-        assert "sub_skills" in task
-        assert "schedule_reason" in task
-    assert "quizzes" in data
+        assert set(task.keys()) == {"task_id", "task", "description", "resources"}
+        assert isinstance(task["resources"], list)
 
 
-def test_weekly_schedule_has_theme_and_quizzes(client: TestClient):
+def test_daily_quizzes_separate_route(client: TestClient):
     _start(client)
-    resp = client.get("/api/tasks/weekly/u_tasks?sync=false")
+    resp = client.get("/api/quizzes/daily/u_tasks?sync=false")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["view"] == "weekly"
-    assert data["theme"]
-    assert data["topics"]
-    assert len(data["tasks"]) >= 1
+    assert data["view"] == "daily"
+    assert "tasks" not in data
+    assert "quizzes" in data
+    if data["quizzes"]:
+        quiz = data["quizzes"][0]
+        assert "task_id" in quiz
+        assert "quiz_id" in quiz
+        assert "questions" in quiz
+        assert isinstance(quiz["questions"], list)
+
+
+def test_weekly_tasks_and_quizzes_split(client: TestClient):
+    _start(client)
+    tasks = client.get("/api/tasks/weekly/u_tasks?sync=false").json()
+    quizzes = client.get("/api/quizzes/weekly/u_tasks?sync=false").json()
+    assert tasks["view"] == "weekly"
+    assert quizzes["view"] == "weekly"
+    assert len(tasks["tasks"]) >= 1
+    assert "quizzes" not in tasks
+    if tasks["tasks"]:
+        assert "task" in tasks["tasks"][0]
+        assert "description" in tasks["tasks"][0]
+        assert "resources" in tasks["tasks"][0]
 
 
 def test_complete_task_updates_state(client: TestClient):
@@ -119,12 +134,12 @@ def test_complete_task_updates_state(client: TestClient):
     assert resp.status_code == 200
     body = resp.json()
     assert body["ok"] is True
-    assert body["task"]["status"] == "completed"
+    assert body["task"]["task_id"] == task["id"]
     state = client.get("/api/state/u_tasks").json()
     assert task["id"] in state["completed_tasks"]
 
 
-def test_failed_task_quiz_triggers_dynamic_replan(client: TestClient):
+def test_failed_quiz_submit_triggers_dynamic_replan(client: TestClient):
     start = _start(client)
     plan_v1 = start["plan"]["version"]
     week1 = start["plan"]["weeks"][0]
@@ -133,7 +148,7 @@ def test_failed_task_quiz_triggers_dynamic_replan(client: TestClient):
     client.post("/api/tasks/complete", json={"user_id": "u_tasks", "task_id": study["id"]})
 
     resp = client.post(
-        "/api/tasks/quiz/submit",
+        "/api/quizzes/submit",
         json={
             "user_id": "u_tasks",
             "task_id": quiz_task["id"],
@@ -146,8 +161,8 @@ def test_failed_task_quiz_triggers_dynamic_replan(client: TestClient):
     assert body["replan_triggered"] is True
     assert body["passed"] is False
     assert "workflow" in body
+    assert "daily_quizzes" in body
 
     state = client.get("/api/state/u_tasks").json()
     assert "SQL Joins" in state["weak_areas"]
     assert state["plan"]["version"] >= plan_v1
-    assert state.get("last_plan_update_reason")
