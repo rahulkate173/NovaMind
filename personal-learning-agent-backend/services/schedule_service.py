@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
 from agents.progress_tracker import days_inactive
@@ -50,80 +49,85 @@ def _update_reason(state: LearnerState) -> Optional[str]:
     return None
 
 
-def _serialize_task(task: Task, state: LearnerState) -> Dict[str, Any]:
-    payload = task.model_dump(mode="json")
-    payload["completed"] = task.id in state.completed_tasks or task.status == TaskStatus.COMPLETED
-    payload["goal"] = state.current_goal
-    payload["current_week"] = state.current_week
-    if task.quiz:
-        payload["quiz"] = task.quiz.model_dump(mode="json")
-    return payload
+def _serialize_task_item(task: Task) -> Dict[str, Any]:
+    """Frontend task payload – title, description, resources only."""
+    return {
+        "task_id": task.id,
+        "task": task.title,
+        "description": task.description,
+        "resources": [r.model_dump(mode="json") for r in task.resources],
+    }
 
 
-def get_daily_schedule(state: LearnerState) -> Dict[str, Any]:
+def _serialize_quiz_item(
+    *,
+    task_id: str,
+    title: str,
+    week: int,
+    day: Optional[int],
+    topics: List[str],
+    quiz,
+    due_reason: str,
+    completed: bool,
+) -> Dict[str, Any]:
+    if quiz is None:
+        return {
+            "task_id": task_id,
+            "title": title,
+            "week": week,
+            "day": day,
+            "topics": topics,
+            "quiz_id": None,
+            "questions": [],
+            "due_reason": due_reason,
+            "completed": completed,
+        }
+    return {
+        "task_id": task_id,
+        "title": title,
+        "week": week,
+        "day": day,
+        "topics": topics,
+        "quiz_id": quiz.quiz_id,
+        "questions": [q.model_dump(mode="json") for q in quiz.questions],
+        "due_reason": due_reason,
+        "completed": completed,
+    }
+
+
+def _schedule_meta(state: LearnerState, view: str, **extra) -> Dict[str, Any]:
+    base = {
+        "user_id": state.user_id,
+        "view": view,
+        "goal": state.current_goal,
+        "current_week": state.current_week,
+        "plan_version": state.plan.version if state.plan else 0,
+        "plan_title": state.plan.title if state.plan else "",
+        "update_reason": _update_reason(state),
+    }
+    base.update(extra)
+    return base
+
+
+def get_daily_tasks(state: LearnerState) -> Dict[str, Any]:
     week = _week_plan(state)
     if not week or not state.plan:
         return {
-            "user_id": state.user_id,
-            "view": "daily",
-            "goal": state.current_goal,
-            "current_week": state.current_week,
-            "focus_day": 1,
-            "plan_version": 0,
-            "update_reason": _update_reason(state),
+            **_schedule_meta(state, "daily", focus_day=1),
             "tasks": [],
-            "quizzes": [],
             "message": "No plan found. Start workflow first.",
         }
 
     completed = set(state.completed_tasks)
     day = _focus_day(week, completed)
-
-    # Today's study tasks + checkpoint quiz if study done
     daily_tasks: List[Dict[str, Any]] = []
-    daily_quizzes: List[Dict[str, Any]] = []
 
     for task in week.tasks:
-        if task.is_project:
+        if task.is_project or task.is_quiz:
             continue
         on_day = (task.day or 1) == day
-        is_due_quiz = task.is_quiz and _study_tasks_done_for_day(week, day, completed)
-
-        if task.is_quiz:
-            if is_due_quiz and task.id not in completed and task.status != TaskStatus.COMPLETED:
-                daily_quizzes.append(
-                    {
-                        "task_id": task.id,
-                        "title": task.title,
-                        "week": task.week,
-                        "day": day,
-                        "description": task.description or f"Checkpoint quiz for week {task.week}, day {day}.",
-                        "topics": task.topics,
-                        "quiz": task.quiz.model_dump(mode="json") if task.quiz else None,
-                        "due_reason": "Complete today's study tasks, then take this quiz.",
-                    }
-                )
-            continue
-
         if on_day and task.id not in completed and task.status != TaskStatus.COMPLETED:
-            item = _serialize_task(task, state)
-            item["schedule_reason"] = (
-                f"Day {day} focus for week {state.current_week} toward: {state.current_goal}"
-            )
-            daily_tasks.append(item)
-            if task.quiz:
-                daily_quizzes.append(
-                    {
-                        "task_id": task.id,
-                        "title": f"Quiz: {task.topics[0] if task.topics else task.title}",
-                        "week": task.week,
-                        "day": day,
-                        "description": task.description,
-                        "topics": task.topics,
-                        "quiz": task.quiz.model_dump(mode="json"),
-                        "due_reason": "Take after completing this study task (or at start if reviewing).",
-                    }
-                )
+            daily_tasks.append(_serialize_task_item(task))
 
     overdue = _overdue_pending_tasks(week, day, completed)
     reason = _update_reason(state)
@@ -131,74 +135,141 @@ def get_daily_schedule(state: LearnerState) -> Dict[str, Any]:
         reason = f"{len(overdue)} earlier task(s) still pending – plan may update after quiz/progress sync."
 
     return {
-        "user_id": state.user_id,
-        "view": "daily",
-        "goal": state.current_goal,
-        "current_week": state.current_week,
-        "focus_day": day,
-        "plan_version": state.plan.version,
-        "plan_title": state.plan.title,
-        "state_inference": state.state_inference,
-        "overall_progress": state.overall_progress,
-        "next_milestone": state.next_milestone,
-        "update_reason": reason,
+        **_schedule_meta(state, "daily", focus_day=day, update_reason=reason),
         "overdue_task_ids": [t.id for t in overdue],
-        "days_inactive": days_inactive(state),
         "tasks": daily_tasks,
-        "quizzes": daily_quizzes,
     }
 
 
-def get_weekly_schedule(state: LearnerState) -> Dict[str, Any]:
+def get_weekly_tasks(state: LearnerState) -> Dict[str, Any]:
     week = _week_plan(state)
     if not week or not state.plan:
         return {
-            "user_id": state.user_id,
-            "view": "weekly",
-            "goal": state.current_goal,
-            "current_week": state.current_week,
-            "plan_version": 0,
-            "update_reason": _update_reason(state),
-            "theme": "",
-            "topics": [],
+            **_schedule_meta(state, "weekly", theme="", topics=[]),
             "tasks": [],
+            "message": "No plan found. Start workflow first.",
+        }
+
+    tasks = [
+        _serialize_task_item(t)
+        for t in week.tasks
+        if not t.is_quiz and not t.is_project
+    ]
+
+    return {
+        **_schedule_meta(state, "weekly", theme=week.theme, topics=week.topics),
+        "tasks": tasks,
+    }
+
+
+def get_daily_quizzes(state: LearnerState) -> Dict[str, Any]:
+    week = _week_plan(state)
+    if not week or not state.plan:
+        return {
+            **_schedule_meta(state, "daily", focus_day=1),
             "quizzes": [],
             "message": "No plan found. Start workflow first.",
         }
 
-    tasks = [_serialize_task(t, state) for t in week.tasks if not t.is_quiz]
-    quizzes = [
-        {
-            "task_id": t.id,
-            "title": t.title,
-            "week": t.week,
-            "description": t.description,
-            "topics": t.topics,
-            "quiz": t.quiz.model_dump(mode="json") if t.quiz else None,
-            "due_reason": "Weekly checkpoint – complete after the week's study tasks.",
-            "completed": t.id in state.completed_tasks,
-        }
-        for t in week.tasks
-        if t.is_quiz
-    ]
+    completed = set(state.completed_tasks)
+    day = _focus_day(week, completed)
+    daily_quizzes: List[Dict[str, Any]] = []
+
+    for task in week.tasks:
+        if task.is_project:
+            continue
+        on_day = (task.day or 1) == day
+        is_due_checkpoint = task.is_quiz and _study_tasks_done_for_day(week, day, completed)
+
+        if task.is_quiz:
+            if is_due_checkpoint and task.id not in completed and task.status != TaskStatus.COMPLETED:
+                daily_quizzes.append(
+                    _serialize_quiz_item(
+                        task_id=task.id,
+                        title=task.title,
+                        week=task.week,
+                        day=day,
+                        topics=task.topics,
+                        quiz=task.quiz,
+                        due_reason="Complete today's study tasks, then take this checkpoint quiz.",
+                        completed=False,
+                    )
+                )
+            continue
+
+        if on_day and task.id not in completed and task.status != TaskStatus.COMPLETED and task.quiz:
+            daily_quizzes.append(
+                _serialize_quiz_item(
+                    task_id=task.id,
+                    title=f"Quiz: {task.topics[0] if task.topics else task.title}",
+                    week=task.week,
+                    day=day,
+                    topics=task.topics,
+                    quiz=task.quiz,
+                    due_reason="Take after completing the related study task (or at start if reviewing).",
+                    completed=False,
+                )
+            )
 
     return {
-        "user_id": state.user_id,
-        "view": "weekly",
-        "goal": state.current_goal,
-        "current_week": state.current_week,
-        "plan_version": state.plan.version,
-        "plan_title": state.plan.title,
-        "state_inference": state.state_inference,
-        "overall_progress": state.overall_progress,
-        "next_milestone": state.next_milestone,
-        "update_reason": _update_reason(state),
-        "theme": week.theme,
-        "topics": week.topics,
-        "hours_allocated": week.hours_allocated,
-        "tasks": tasks,
+        **_schedule_meta(state, "daily", focus_day=day),
+        "quizzes": daily_quizzes,
+    }
+
+
+def get_weekly_quizzes(state: LearnerState) -> Dict[str, Any]:
+    week = _week_plan(state)
+    if not week or not state.plan:
+        return {
+            **_schedule_meta(state, "weekly", theme="", topics=[]),
+            "quizzes": [],
+            "message": "No plan found. Start workflow first.",
+        }
+
+    completed = set(state.completed_tasks)
+    quizzes: List[Dict[str, Any]] = []
+
+    for task in week.tasks:
+        if task.is_quiz:
+            quizzes.append(
+                _serialize_quiz_item(
+                    task_id=task.id,
+                    title=task.title,
+                    week=task.week,
+                    day=task.day,
+                    topics=task.topics,
+                    quiz=task.quiz,
+                    due_reason="Weekly checkpoint – complete after the week's study tasks.",
+                    completed=task.id in completed or task.status == TaskStatus.COMPLETED,
+                )
+            )
+        elif task.quiz and not task.is_project:
+            quizzes.append(
+                _serialize_quiz_item(
+                    task_id=task.id,
+                    title=f"Quiz: {task.topics[0] if task.topics else task.title}",
+                    week=task.week,
+                    day=task.day,
+                    topics=task.topics,
+                    quiz=task.quiz,
+                    due_reason="Subtask quiz for this week's study item.",
+                    completed=task.id in completed or task.status == TaskStatus.COMPLETED,
+                )
+            )
+
+    return {
+        **_schedule_meta(state, "weekly", theme=week.theme, topics=week.topics),
         "quizzes": quizzes,
     }
+
+
+# Backward-compatible aliases used internally
+def get_daily_schedule(state: LearnerState) -> Dict[str, Any]:
+    return get_daily_tasks(state)
+
+
+def get_weekly_schedule(state: LearnerState) -> Dict[str, Any]:
+    return get_weekly_tasks(state)
 
 
 def _study_tasks_done_for_day(week: WeeklyPlan, day: int, completed: set[str]) -> bool:

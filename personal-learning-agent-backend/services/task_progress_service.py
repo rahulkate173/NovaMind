@@ -8,7 +8,13 @@ from typing import Any, Dict, List, Optional
 from agents.progress_tracker import compute_progress, days_inactive, track_activity
 from agents.state_manager import StateManager
 from config import get_settings
-from services.schedule_service import find_task, get_daily_schedule, get_weekly_schedule
+from services.schedule_service import (
+    find_task,
+    get_daily_quizzes,
+    get_daily_tasks,
+    get_weekly_quizzes,
+    get_weekly_tasks,
+)
 from state.models import LearnerState, QuizResult, TaskStatus
 from utils.helpers import clamp, unique_extend
 from workflow.executor import WorkflowExecutor
@@ -24,26 +30,49 @@ class TaskProgressService:
         self.executor = executor or WorkflowExecutor()
         self.executor.state_manager = state_manager
 
+    def get_tasks(self, user_id: str, view: str = "daily", sync: bool = True) -> Dict[str, Any]:
+        state, replan = self._maybe_sync(user_id, sync)
+        payload = get_daily_tasks(state) if view == "daily" else get_weekly_tasks(state)
+        return self._attach_sync(payload, replan, sync)
+
+    def get_quizzes(self, user_id: str, view: str = "daily", sync: bool = True) -> Dict[str, Any]:
+        state, replan = self._maybe_sync(user_id, sync)
+        payload = get_daily_quizzes(state) if view == "daily" else get_weekly_quizzes(state)
+        return self._attach_sync(payload, replan, sync)
+
     def get_schedule(self, user_id: str, view: str = "daily", sync: bool = True) -> Dict[str, Any]:
+        """Alias for get_tasks (tasks only, no quizzes)."""
+        return self.get_tasks(user_id, view=view, sync=sync)
+
+    def _maybe_sync(
+        self, user_id: str, sync: bool
+    ) -> tuple[LearnerState, Optional[Dict[str, Any]]]:
         state = self._require_state(user_id)
         replan_result = None
         if sync:
             state, replan_result = self._sync_if_needed(state)
-        schedule = get_daily_schedule(state) if view == "daily" else get_weekly_schedule(state)
+        return state, replan_result
+
+    def _attach_sync(
+        self,
+        payload: Dict[str, Any],
+        replan_result: Optional[Dict[str, Any]],
+        sync: bool,
+    ) -> Dict[str, Any]:
         if replan_result:
-            schedule["workflow"] = {
+            payload["workflow"] = {
                 "triggered": True,
                 "status": replan_result.get("status"),
                 "route": replan_result.get("route"),
                 "messages": replan_result.get("messages"),
             }
-            schedule["update_reason"] = replan_result.get("update_reason") or schedule.get("update_reason")
-            schedule["plan_version"] = (
+            payload["update_reason"] = replan_result.get("update_reason") or payload.get("update_reason")
+            payload["plan_version"] = (
                 replan_result.get("learner_state", {}).get("plan", {}).get("version")
-                or schedule.get("plan_version")
+                or payload.get("plan_version")
             )
-        schedule["synced"] = sync
-        return schedule
+        payload["synced"] = sync
+        return payload
 
     def complete_task(self, user_id: str, task_id: str) -> Dict[str, Any]:
         state = self._require_state(user_id)
@@ -58,17 +87,19 @@ class TaskProgressService:
         state = self._refresh_progress(state)
         self.state_manager.save(state)
 
+        from services.schedule_service import _serialize_task_item
+
         next_task = self._next_pending_task(state)
         return {
             "ok": True,
             "user_id": user_id,
             "task_id": task_id,
-            "task": task.model_dump(mode="json"),
+            "task": _serialize_task_item(task),
             "week": week.week if week else state.current_week,
             "overall_progress": state.overall_progress,
             "completed_tasks_count": len(state.completed_tasks),
             "next_task_id": next_task.id if next_task else None,
-            "daily": get_daily_schedule(state),
+            "daily_tasks": get_daily_tasks(state),
         }
 
     def submit_task_quiz(
@@ -125,7 +156,8 @@ class TaskProgressService:
             "weak_topics": weak_topics,
             "replan_triggered": not passed,
             "learner_state": state.model_dump(mode="json"),
-            "daily": get_daily_schedule(state),
+            "daily_tasks": get_daily_tasks(state),
+            "daily_quizzes": get_daily_quizzes(state),
         }
         if replan_result:
             response["workflow"] = replan_result
