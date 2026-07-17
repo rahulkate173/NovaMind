@@ -104,7 +104,7 @@ export default function SetupModal({ onSubmit, loading }) {
             className="setup-submit-btn"
             disabled={loading}
           >
-            {loading ? 'Building your plan…' : '🚀 Generate My Roadmap'}
+            {loading ? 'Building your plan…' : 'Generate My Roadmap'}
           </button>
         </form>
       </div>

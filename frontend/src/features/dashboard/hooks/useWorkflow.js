@@ -11,6 +11,8 @@ const CACHE_KEY = (uid) => `nm_workflow_plan_${uid}`;
  *
  * @param {string} userId
  */
+const inFlightPlans = {};
+
 export function useWorkflow(userId) {
   const [plan, setPlan]         = useState(null);
   const [loading, setLoading]   = useState(true);
@@ -37,16 +39,25 @@ export function useWorkflow(userId) {
     setLoading(true);
     setError(null);
     try {
-      const data = await getPlan(userId);
-      const p = data.plan ?? data;
-      setPlan(p);
-      savePlanToCache(p);
+      if (!inFlightPlans[userId]) {
+        inFlightPlans[userId] = getPlan(userId).finally(() => {
+          delete inFlightPlans[userId];
+        });
+      }
+      const data = await inFlightPlans[userId];
+      const p = data?.plan ?? data;
+      if (p && (p.weeks || p.title || p.goal)) {
+        setPlan(p);
+        savePlanToCache(p);
+      } else {
+        setPlan(prev => prev || null);
+      }
     } catch (err) {
       // 404 = no plan yet, not a real error
-      if (!err.message.includes('404') && !err.message.toLowerCase().includes('not found')) {
+      if (!err.message?.includes('404') && !err.message?.toLowerCase().includes('not found')) {
         setError(err.message);
       }
-      setPlan(null);
+      setPlan(prev => prev || null);
     } finally {
       setLoading(false);
     }
@@ -60,10 +71,18 @@ export function useWorkflow(userId) {
     if (cached) {
       setPlan(cached);
       setLoading(false); // show immediately
+      fetchPlan();
+    } else {
+      // If no cached plan right after sign up/login, don't let slow 404s block the form
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 400);
+      fetchPlan().finally(() => {
+        clearTimeout(timer);
+        setLoading(false);
+      });
+      return () => clearTimeout(timer);
     }
-
-    // Fetch fresh regardless
-    fetchPlan();
   }, [userId]); // intentionally omitting fetchPlan to avoid double-call
 
   /**
@@ -77,6 +96,11 @@ export function useWorkflow(userId) {
       const result = await startWorkflow({ user_id: userId, ...params });
       // Only re-fetch if not waiting for clarification
       if (result && result.status !== 'awaiting_clarification') {
+        const newPlan = result.plan || result.learner_state?.plan || (result.weeks ? result : null);
+        if (newPlan && (newPlan.weeks || newPlan.title)) {
+          setPlan(newPlan);
+          savePlanToCache(newPlan);
+        }
         await fetchPlan();
       }
       return result;
@@ -86,7 +110,7 @@ export function useWorkflow(userId) {
     } finally {
       setStarting(false);
     }
-  }, [userId, fetchPlan]);
+  }, [userId, fetchPlan, savePlanToCache]);
 
   return { plan, loading, starting, error, initPlan, refetch: fetchPlan };
 }

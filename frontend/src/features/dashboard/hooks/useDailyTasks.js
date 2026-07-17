@@ -19,6 +19,8 @@ const CACHE_KEY = (uid) => `nm_daily_tasks_${uid}`;
  *
  * @param {string} userId
  */
+const inFlightTasks = {};
+
 export function useDailyTasks(userId) {
   const [tasks, setTasks]     = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +57,12 @@ export function useDailyTasks(userId) {
     setLoading(true);
     setError(null);
     try {
-      const data = await getDailyTasks(userId, true);
+      if (!inFlightTasks[userId]) {
+        inFlightTasks[userId] = getDailyTasks(userId, true).finally(() => {
+          delete inFlightTasks[userId];
+        });
+      }
+      const data = await inFlightTasks[userId];
       const list = Array.isArray(data) ? data : (data.tasks ?? []);
       const normalised = list.map(normalise);
       setTasks(normalised);

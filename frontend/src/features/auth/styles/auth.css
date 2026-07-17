@@ -38,37 +38,57 @@
 }
 
 .glow-1 {
-  width: 450px; height: 450px;
+  width: 450px;
+  height: 450px;
   background: rgba(99, 102, 241, 0.45);
-  top: -10%; left: -10%;
+  top: -10%;
+  left: -10%;
 }
 
 .glow-2 {
-  width: 500px; height: 500px;
+  width: 500px;
+  height: 500px;
   background: rgba(236, 72, 153, 0.35);
-  bottom: -15%; right: -5%;
+  bottom: -15%;
+  right: -5%;
   animation-delay: -6s;
 }
 
 .glow-3 {
-  width: 380px; height: 380px;
+  width: 380px;
+  height: 380px;
   background: rgba(56, 189, 248, 0.3);
-  top: 40%; left: 30%;
+  top: 40%;
+  left: 30%;
   animation-delay: -3s;
 }
 
 @keyframes cosmicPulse {
-  0%   { transform: scale(1) translate(0, 0); opacity: 0.6; }
-  50%  { transform: scale(1.15) translate(40px, -30px); opacity: 0.9; }
-  100% { transform: scale(0.95) translate(-30px, 40px); opacity: 0.7; }
+  0% {
+    transform: scale(1) translate(0, 0);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: scale(1.15) translate(40px, -30px);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(0.95) translate(-30px, 40px);
+    opacity: 0.7;
+  }
 }
 
 /* Starfield / Shimmer Dots */
 .auth-starfield {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-image: radial-gradient(rgba(255, 255, 255, 0.25) 1px, transparent 1px),
-                    radial-gradient(rgba(168, 85, 247, 0.2) 1.5px, transparent 1.5px);
+    radial-gradient(rgba(168, 85, 247, 0.2) 1.5px, transparent 1.5px);
   background-size: 50px 50px, 80px 80px;
   background-position: 0 0, 25px 25px;
   opacity: 0.65;
@@ -105,7 +125,8 @@
 }
 
 .auth-neon-dot {
-  width: 8px; height: 8px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #38bdf8;
   box-shadow: 0 0 12px #38bdf8;
@@ -113,8 +134,17 @@
 }
 
 @keyframes pulseNeon {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50%      { transform: scale(1.3); opacity: 0.4; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.3);
+    opacity: 0.4;
+  }
 }
 
 /* SVG Wrapper & Animations */
@@ -151,13 +181,23 @@
 }
 
 @keyframes spinRight {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes spinLeft {
-  0%   { transform: rotate(360deg); }
-  100% { transform: rotate(0deg); }
+  0% {
+    transform: rotate(360deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 /* Pulsing Core */
@@ -167,8 +207,15 @@
 }
 
 @keyframes corePulse {
-  0%   { transform: scale(0.92); opacity: 0.85; }
-  100% { transform: scale(1.08); opacity: 1; }
+  0% {
+    transform: scale(0.92);
+    opacity: 0.85;
+  }
+
+  100% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
 }
 
 /* Floating Satellite Nodes */
@@ -176,14 +223,30 @@
   animation: satFloat 5s ease-in-out infinite alternate;
 }
 
-.sat-1 { animation-delay: 0s; }
-.sat-2 { animation-delay: -1.5s; }
-.sat-3 { animation-delay: -3s; }
-.sat-4 { animation-delay: -4.5s; }
+.sat-1 {
+  animation-delay: 0s;
+}
+
+.sat-2 {
+  animation-delay: -1.5s;
+}
+
+.sat-3 {
+  animation-delay: -3s;
+}
+
+.sat-4 {
+  animation-delay: -4.5s;
+}
 
 @keyframes satFloat {
-  0%   { transform: translateY(0px) scale(1); }
-  100% { transform: translateY(-8px) scale(1.06); }
+  0% {
+    transform: translateY(0px) scale(1);
+  }
+
+  100% {
+    transform: translateY(-8px) scale(1.06);
+  }
 }
 
 /* Minimalist Statement Below SVG */
@@ -248,7 +311,8 @@
 }
 
 .auth-theme-btn svg {
-  width: 16px; height: 16px;
+  width: 16px;
+  height: 16px;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -277,8 +341,15 @@
 }
 
 @keyframes authFadeInUp {
-  0%   { opacity: 0; transform: translateY(20px) scale(0.98); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Header inside Card */
@@ -288,7 +359,8 @@
 }
 
 .auth-logo-icon {
-  width: 58px; height: 58px;
+  width: 58px;
+  height: 58px;
   background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
   border-radius: 18px;
   display: inline-flex;
@@ -384,7 +456,8 @@
 }
 
 .auth-google-icon {
-  width: 22px; height: 22px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
 }
 
@@ -457,9 +530,12 @@ html[data-theme='dark'] .auth-google-btn:hover {
   .auth-split-container {
     grid-template-columns: 1fr;
   }
+
   .auth-showcase {
-    display: none; /* Keep clean login card center when folded on mobile */
+    display: none;
+    /* Keep clean login card center when folded on mobile */
   }
+
   .auth-modal-wrapper {
     min-height: 100vh;
   }

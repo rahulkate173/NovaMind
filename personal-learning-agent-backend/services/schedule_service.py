@@ -202,16 +202,16 @@ def get_daily_quizzes(state: LearnerState) -> Dict[str, Any]:
             continue
 
         is_completed = task.id in completed or task.status == TaskStatus.COMPLETED
-        if on_day and task.quiz:
+        if (on_day or is_completed) and task.quiz:
             daily_quizzes.append(
                 _serialize_quiz_item(
                     task_id=task.id,
                     title=f"Quiz: {task.topics[0] if task.topics else task.title}",
                     week=task.week,
-                    day=day,
+                    day=task.day or day,
                     topics=task.topics,
                     quiz=task.quiz,
-                    due_reason="Take after completing the related study task (or at start if reviewing).",
+                    due_reason="Completed quiz." if is_completed else "Take after completing the related study task (or at start if reviewing).",
                     completed=is_completed,
                 )
             )

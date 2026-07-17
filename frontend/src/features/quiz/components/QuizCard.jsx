@@ -51,7 +51,7 @@ export default function QuizCard({ quiz, index, onStart }) {
       {/* Footer */}
       <div className="quiz-card-footer">
         <span className="quiz-card-meta">
-          📋 {qCount} question{qCount !== 1 ? 's' : ''}
+          {qCount} question{qCount !== 1 ? 's' : ''}
         </span>
 
         {!completed ? (
