@@ -87,8 +87,21 @@ class StateRepository:
 _repo: Optional[StateRepository] = None
 
 
-def get_repository() -> StateRepository:
+def get_repository():
+    """Return SQLite or MongoDB repository based on STATE_STORE in .env."""
     global _repo
     if _repo is None:
-        _repo = StateRepository()
+        settings = get_settings()
+        if settings.state_store.strip().lower() == "mongodb":
+            from state.mongo_repository import MongoStateRepository
+
+            _repo = MongoStateRepository()
+        else:
+            _repo = StateRepository()
     return _repo
+
+
+def reset_repository() -> None:
+    """Clear cached repository (tests / settings reload)."""
+    global _repo
+    _repo = None

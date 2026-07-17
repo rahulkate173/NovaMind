@@ -50,11 +50,20 @@ def root():
 
 @app.get("/health")
 def health():
-    return {
+    store = settings.state_store.strip().lower()
+    payload = {
         "status": "ok",
         "env": settings.app_env,
         "mock_llm": not settings.llm_available,
+        "state_store": store,
     }
+    if store == "mongodb":
+        from state.repository import get_repository
+
+        repo = get_repository()
+        payload["mongodb_collection"] = settings.mongodb_collection
+        payload["mongodb_connected"] = getattr(repo, "ping", lambda: False)()
+    return payload
 
 
 @app.get("/api/mcp/tools")

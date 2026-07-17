@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     use_mock_llm: bool = True
 
     database_url: str = "sqlite+aiosqlite:///./data/learner.db"
+    # sqlite (default) or mongodb
+    state_store: str = "sqlite"
+    mongodb_uri: str = ""
+    mongodb_database: str = ""
+    mongodb_collection: str = "ai-agent-backend"
     chroma_persist_dir: str = "./data/chroma"
 
     roadmap_service_url: str = "http://localhost:8090"
